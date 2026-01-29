@@ -14,10 +14,10 @@ build/
 # Virtual environments
 venv/
 .env/
-.env.*
 .venv/
 ENV/
 env/
+.env
 
 # Pyenv
 .python-version
