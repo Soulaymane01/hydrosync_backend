@@ -146,11 +146,42 @@ class DashboardView(APIView):
             total=Sum('reading_value')
         )['total'] or Decimal('0.000')
         
-        # Calculate change percentage
-        if total_yesterday > 0:
+        # Calculate change percentage with edge case handling
+        # Minimum threshold for meaningful comparison (10 liters)
+        MIN_THRESHOLD = Decimal('10.0')
+        MAX_PERCENTAGE = Decimal('999.0')
+        
+        comparison_reliable = True
+        
+        if total_yesterday > MIN_THRESHOLD:
+            # Normal calculation
             change_percentage = ((total_today - total_yesterday) / total_yesterday) * 100
+            
+            # Cap extreme percentages
+            if change_percentage > MAX_PERCENTAGE:
+                change_percentage = MAX_PERCENTAGE
+            elif change_percentage < -MAX_PERCENTAGE:
+                change_percentage = -MAX_PERCENTAGE
+        elif total_yesterday > 0:
+            # Yesterday's data exists but is too low for reliable comparison
+            change_percentage = ((total_today - total_yesterday) / total_yesterday) * 100
+            
+            # Cap the percentage
+            if change_percentage > MAX_PERCENTAGE:
+                change_percentage = MAX_PERCENTAGE
+            elif change_percentage < -MAX_PERCENTAGE:
+                change_percentage = -MAX_PERCENTAGE
+            
+            # Mark as unreliable
+            comparison_reliable = False
         else:
-            change_percentage = Decimal('0.00')
+            # No data from yesterday
+            if total_today > 0:
+                change_percentage = MAX_PERCENTAGE  # Maximum increase
+                comparison_reliable = False
+            else:
+                change_percentage = Decimal('0.00')
+                comparison_reliable = False
         
         # Active meters count
         active_meters = Meters.objects.filter(status='active').count()
@@ -162,6 +193,7 @@ class DashboardView(APIView):
             'average_hourly': average_hourly,
             'total_yesterday': total_yesterday,
             'change_percentage': change_percentage,
+            'comparison_reliable': comparison_reliable,
             'active_meters': active_meters,
             'total_readings_today': readings_count_today
         }

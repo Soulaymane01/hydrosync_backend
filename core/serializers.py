@@ -49,6 +49,7 @@ class DashboardStatsSerializer(serializers.Serializer):
     total_today = serializers.DecimalField(max_digits=12, decimal_places=3)
     average_hourly = serializers.DecimalField(max_digits=12, decimal_places=3)
     total_yesterday = serializers.DecimalField(max_digits=12, decimal_places=3)
-    change_percentage = serializers.DecimalField(max_digits=5, decimal_places=2)
+    change_percentage = serializers.DecimalField(max_digits=6, decimal_places=2)
+    comparison_reliable = serializers.BooleanField()
     active_meters = serializers.IntegerField()
     total_readings_today = serializers.IntegerField()

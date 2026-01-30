@@ -1,20 +1,58 @@
 """
-Script to populate the database with test data for water consumption
-Run with: python manage.py shell < populate_test_data.py
-Or: python manage.py shell
-Then: exec(open('populate_test_data.py').read())
+Utility script to reset and repopulate test data for HydroSync
+This script safely clears all meter readings and regenerates fresh test data.
+
+Usage:
+    python manage.py shell < reset_test_data.py
+
+Or in Django shell:
+    python manage.py shell
+    >>> exec(open('reset_test_data.py').read())
 """
 
 import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
 from django.utils import timezone
+from django.db.models import Sum
 from core.models import Customers, Meters, MeterReadings, RegionalZones, BillingCycles
 import random
 
-print("🚀 Starting to populate test data...")
+print("=" * 60)
+print("🔄 HYDROSYNC TEST DATA RESET UTILITY")
+print("=" * 60)
 
-# Create a regional zone if it doesn't exist
+# Step 1: Display current data statistics
+print("\n📊 Current database statistics:")
+total_readings = MeterReadings.objects.count()
+total_meters = Meters.objects.count()
+total_customers = Customers.objects.count()
+
+print(f"   Customers: {total_customers}")
+print(f"   Meters: {total_meters}")
+print(f"   Readings: {total_readings}")
+
+if total_readings > 0:
+    total_consumption = MeterReadings.objects.aggregate(
+        total=Sum('reading_value')
+    )['total'] or Decimal('0.000')
+    print(f"   Total consumption: {total_consumption} L")
+
+# Step 2: Confirm deletion
+print("\n⚠️  This will DELETE all meter readings!")
+print("   (Customers and Meters will be preserved)")
+
+# Delete all meter readings
+print("\n🗑️  Deleting all meter readings...")
+deleted_count, _ = MeterReadings.objects.all().delete()
+print(f"✅ Deleted {deleted_count} readings")
+
+# Step 3: Regenerate test data
+print("\n" + "=" * 60)
+print("🚀 REGENERATING TEST DATA")
+print("=" * 60)
+
+# Create or get regional zone
 region, created = RegionalZones.objects.get_or_create(
     name="Zone Test",
     defaults={
@@ -29,7 +67,7 @@ region, created = RegionalZones.objects.get_or_create(
 )
 print(f"✓ Regional Zone: {region.name} {'(created)' if created else '(existing)'}")
 
-# Create a billing cycle if it doesn't exist
+# Create or get billing cycle
 billing_cycle, created = BillingCycles.objects.get_or_create(
     name="Monthly Test",
     defaults={
@@ -43,7 +81,7 @@ billing_cycle, created = BillingCycles.objects.get_or_create(
 )
 print(f"✓ Billing Cycle: {billing_cycle.name} {'(created)' if created else '(existing)'}")
 
-# Create a test customer if it doesn't exist
+# Create or get test customer
 customer, created = Customers.objects.get_or_create(
     customer_id="CUST-TEST-001",
     defaults={
@@ -68,7 +106,7 @@ customer, created = Customers.objects.get_or_create(
 )
 print(f"✓ Customer: {customer.name} {'(created)' if created else '(existing)'}")
 
-# Create a test meter if it doesn't exist
+# Create or get test meter
 meter, created = Meters.objects.get_or_create(
     meter_id="METER-ESP32-001",
     defaults={
@@ -91,14 +129,14 @@ meter, created = Meters.objects.get_or_create(
 )
 print(f"✓ Meter: {meter.meter_id} {'(created)' if created else '(existing)'}")
 
-# Generate test readings for the last 24 hours
-print("\n📊 Generating meter readings for the last 24 hours...")
+# Generate test readings for the last 48 hours
+print("\n📊 Generating meter readings for the last 48 hours...")
 
 now = timezone.now()
 readings_created = 0
 
-# Generate readings every 5 minutes for the last 24 hours
-for i in range(288):  # 24 hours * 60 minutes / 5 minutes = 288 readings
+# Generate readings every 5 minutes for the last 48 hours
+for i in range(576):  # 48 hours * 60 minutes / 5 minutes = 576 readings
     reading_time = now - timedelta(minutes=5 * i)
     
     # Simulate realistic water consumption pattern
@@ -127,28 +165,22 @@ for i in range(288):  # 24 hours * 60 minutes / 5 minutes = 288 readings
     else:
         usage_status = 'low'
     
-    # Check if reading already exists for this time
-    existing = MeterReadings.objects.filter(
+    # Create reading
+    reading = MeterReadings.objects.create(
+        id=uuid.uuid4(),
         meter=meter,
-        reading_date=reading_time
-    ).exists()
-    
-    if not existing:
-        reading = MeterReadings.objects.create(
-            id=uuid.uuid4(),
-            meter=meter,
-            reading_value=reading_value,
-            unit='L',
-            reading_date=reading_time,
-            reading_type='automatic',
-            anomaly_detected=False,
-            usage_status=usage_status,
-            quality_status='good',
-            created_at=reading_time
-        )
-        readings_created += 1
+        reading_value=reading_value,
+        unit='L',
+        reading_date=reading_time,
+        reading_type='automatic',
+        anomaly_detected=False,
+        usage_status=usage_status,
+        quality_status='good',
+        created_at=reading_time
+    )
+    readings_created += 1
 
-print(f"✓ Created {readings_created} new meter readings")
+print(f"✅ Created {readings_created} new meter readings")
 
 # Update meter's last reading
 latest_reading = MeterReadings.objects.filter(meter=meter).order_by('-reading_date').first()
@@ -158,25 +190,43 @@ if latest_reading:
     meter.save()
     print(f"✓ Updated meter last reading: {meter.last_reading} L at {meter.last_reading_date}")
 
-# Display summary
-total_readings = MeterReadings.objects.filter(meter=meter).count()
+# Display summary with today/yesterday breakdown
+print("\n" + "=" * 60)
+print("📈 SUMMARY")
+print("=" * 60)
+
+today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+yesterday_start = today_start - timedelta(days=1)
+
+today_stats = MeterReadings.objects.filter(
+    meter=meter,
+    reading_date__gte=today_start
+).aggregate(total=Sum('reading_value'))
+
+yesterday_stats = MeterReadings.objects.filter(
+    meter=meter,
+    reading_date__gte=yesterday_start,
+    reading_date__lt=today_start
+).aggregate(total=Sum('reading_value'))
+
 total_consumption = MeterReadings.objects.filter(meter=meter).aggregate(
-    total=models.Sum('reading_value')
+    total=Sum('reading_value')
 )['total'] or Decimal('0.000')
 
-print("\n" + "="*50)
-print("📈 SUMMARY")
-print("="*50)
 print(f"Customer: {customer.name}")
 print(f"Meter ID: {meter.meter_id}")
-print(f"Total Readings: {total_readings}")
-print(f"Total Consumption: {total_consumption} L")
+print(f"Total Readings: {readings_created}")
+print(f"Total Consumption (48h): {total_consumption} L")
+print(f"\n📊 Today's consumption: {today_stats['total'] or Decimal('0.000')} L")
+print(f"📊 Yesterday's consumption: {yesterday_stats['total'] or Decimal('0.000')} L")
 print(f"Latest Reading: {meter.last_reading} L")
 print(f"Status: {meter.status}")
-print("="*50)
-print("\n✅ Test data population completed!")
+print("=" * 60)
+
+print("\n✅ Test data reset and regeneration completed!")
 print("\n🔗 You can now test the API endpoints:")
 print("   - http://localhost:8000/api/readings/latest/")
 print("   - http://localhost:8000/api/readings/realtime/")
 print("   - http://localhost:8000/api/dashboard/overview/")
 print("   - http://localhost:8000/api/meters/")
+print("\n💡 Tip: Run this script anytime you need fresh, balanced test data!")
