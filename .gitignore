@@ -92,3 +92,6 @@ docker-compose.override.yml
 # Logs
 # =========================
 *.log
+
+#moub file that concern DB
+db_schema.md
