@@ -5,18 +5,19 @@
 #   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
 
 
 
 class Assets(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     asset_id = models.CharField(unique=True, max_length=100)
     type = models.CharField(max_length=100)
     location = models.CharField(max_length=255, blank=True, null=True)
     region = models.ForeignKey('RegionalZones', models.DO_NOTHING, blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=50, blank=True, null=True, default='active')
     purchase_date = models.DateField(blank=True, null=True)
     warranty_end = models.DateField(blank=True, null=True)
     model = models.CharField(max_length=100, blank=True, null=True)
@@ -34,7 +35,7 @@ class Assets(models.Model):
 
 
 class AuditLogs(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user_id = models.UUIDField(blank=True, null=True)
     user_type = models.CharField(max_length=50, blank=True, null=True)
     user_email = models.CharField(max_length=255, blank=True, null=True)
@@ -44,7 +45,7 @@ class AuditLogs(models.Model):
     changes = models.JSONField(blank=True, null=True)
     ip_address = models.CharField(max_length=45, blank=True, null=True)
     user_agent = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
 
     class Meta:
         managed = True
@@ -53,11 +54,11 @@ class AuditLogs(models.Model):
 
 
 class BillingCycles(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(unique=True, max_length=100)
     frequency = models.CharField(max_length=50)
     day_of_month = models.IntegerField(blank=True, null=True)
-    is_active = models.BooleanField(blank=True, null=True)
+    is_active = models.BooleanField(blank=True, null=True, default=True)
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
 
@@ -68,22 +69,22 @@ class BillingCycles(models.Model):
 
 
 class CustomerUsers(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey('Customers', models.DO_NOTHING)
     email = models.CharField(unique=True, max_length=255)
     password = models.CharField(max_length=255)
     phone = models.CharField(max_length=20, blank=True, null=True)
     name = models.CharField(max_length=255, blank=True, null=True)
-    is_primary = models.BooleanField(blank=True, null=True)
-    is_active = models.BooleanField(blank=True, null=True)
+    is_primary = models.BooleanField(blank=True, null=True, default=False)
+    is_active = models.BooleanField(blank=True, null=True, default=True)
     last_login = models.DateTimeField(blank=True, null=True)
-    two_factor_enabled = models.BooleanField(blank=True, null=True)
+    two_factor_enabled = models.BooleanField(blank=True, null=True, default=False)
     two_factor_method = models.CharField(max_length=50, blank=True, null=True)
-    notification_email = models.BooleanField(blank=True, null=True)
-    notification_sms = models.BooleanField(blank=True, null=True)
-    newsletter_opted_in = models.BooleanField(blank=True, null=True)
-    language_preference = models.CharField(max_length=10, blank=True, null=True)
-    theme_preference = models.CharField(max_length=50, blank=True, null=True)
+    notification_email = models.BooleanField(blank=True, null=True, default=True)
+    notification_sms = models.BooleanField(blank=True, null=True, default=False)
+    newsletter_opted_in = models.BooleanField(blank=True, null=True, default=True)
+    language_preference = models.CharField(max_length=10, blank=True, null=True, default='en')
+    theme_preference = models.CharField(max_length=50, blank=True, null=True, default='system')
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
     deleted_at = models.DateTimeField(blank=True, null=True)
@@ -95,22 +96,22 @@ class CustomerUsers(models.Model):
 
 
 class Customers(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer_id = models.CharField(unique=True, max_length=50)
     name = models.CharField(max_length=255)
     address = models.CharField(max_length=500)
     city = models.CharField(max_length=100, blank=True, null=True)
     state = models.CharField(max_length=100, blank=True, null=True)
     zip_code = models.CharField(max_length=20, blank=True, null=True)
-    country = models.CharField(max_length=100, blank=True, null=True)
+    country = models.CharField(max_length=100, blank=True, null=True, default='Morocco')
     region = models.ForeignKey('RegionalZones', models.DO_NOTHING, blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
     email = models.CharField(max_length=255, blank=True, null=True)
     contact_person = models.CharField(max_length=255, blank=True, null=True)
     account_type = models.CharField(max_length=50, blank=True, null=True)
     billing_cycle = models.ForeignKey(BillingCycles, models.DO_NOTHING, blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
-    balance = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    status = models.CharField(max_length=50, blank=True, null=True, default='active')
+    balance = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, default=0.00)
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
     deleted_at = models.DateTimeField(blank=True, null=True)
@@ -122,12 +123,12 @@ class Customers(models.Model):
 
 
 class EnvironmentalData(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     type = models.CharField(max_length=100)
     value = models.DecimalField(max_digits=12, decimal_places=2)
     unit = models.CharField(max_length=50, blank=True, null=True)
     target_value = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=50, blank=True, null=True, default='normal')
     region = models.ForeignKey('RegionalZones', models.DO_NOTHING, blank=True, null=True)
     timestamp = models.DateTimeField()
     created_at = models.DateTimeField(blank=True, null=True)
@@ -139,7 +140,7 @@ class EnvironmentalData(models.Model):
 
 
 class Invoices(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     invoice_id = models.CharField(unique=True, max_length=50)
     customer = models.ForeignKey(Customers, models.DO_NOTHING)
     meter = models.ForeignKey('Meters', models.DO_NOTHING, blank=True, null=True)
@@ -148,9 +149,9 @@ class Invoices(models.Model):
     usage_amount = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True)
     due_date = models.DateField()
     amount_due = models.DecimalField(max_digits=12, decimal_places=2)
-    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    late_fees = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, default=0.00)
+    late_fees = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, default=0.00)
+    status = models.CharField(max_length=50, blank=True, null=True, default='pending')
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
@@ -162,13 +163,13 @@ class Invoices(models.Model):
 
 
 class LeakDetectionEvents(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     meter = models.ForeignKey('Meters', models.DO_NOTHING)
     anomaly_level = models.CharField(max_length=50)
     detected_value = models.DecimalField(max_digits=8, decimal_places=4)
     normal_range = models.DecimalField(max_digits=8, decimal_places=4)
     description = models.TextField(blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=50, blank=True, null=True, default='active')
     acknowledged_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='acknowledged_by', blank=True, null=True)
     acknowledged_at = models.DateTimeField(blank=True, null=True)
     resolved_at = models.DateTimeField(blank=True, null=True)
@@ -182,7 +183,7 @@ class LeakDetectionEvents(models.Model):
 
 
 class Maintenance(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     maintenance_id = models.CharField(unique=True, max_length=50)
     asset = models.ForeignKey(Assets, models.DO_NOTHING)
     type = models.CharField(max_length=50)
@@ -191,7 +192,7 @@ class Maintenance(models.Model):
     cost = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
     performed_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='performed_by', blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=50, blank=True, null=True, default='scheduled')
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
 
@@ -202,15 +203,15 @@ class Maintenance(models.Model):
 
 
 class MeterReadings(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     meter = models.ForeignKey('Meters', models.DO_NOTHING)
     reading_value = models.DecimalField(max_digits=12, decimal_places=3)
-    unit = models.CharField(max_length=20, blank=True, null=True)
+    unit = models.CharField(max_length=20, blank=True, null=True, default='m3')
     reading_date = models.DateTimeField()
-    reading_type = models.CharField(max_length=50, blank=True, null=True)
-    anomaly_detected = models.BooleanField(blank=True, null=True)
-    usage_status = models.CharField(max_length=50, blank=True, null=True)
-    quality_status = models.CharField(max_length=50, blank=True, null=True)
+    reading_type = models.CharField(max_length=50, blank=True, null=True, default='automatic')
+    anomaly_detected = models.BooleanField(blank=True, null=True, default=False)
+    usage_status = models.CharField(max_length=50, blank=True, null=True, default='normal')
+    quality_status = models.CharField(max_length=50, blank=True, null=True, default='good')
     created_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -220,7 +221,7 @@ class MeterReadings(models.Model):
 
 
 class Meters(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     meter_id = models.CharField(unique=True, max_length=100)
     customer = models.ForeignKey(Customers, models.DO_NOTHING)
     type = models.CharField(max_length=50)
@@ -232,7 +233,7 @@ class Meters(models.Model):
     last_reading = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True)
     last_reading_date = models.DateTimeField(blank=True, null=True)
     error_status = models.CharField(max_length=50, blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=50, blank=True, null=True, default='active')
     firmware_version = models.CharField(max_length=50, blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
@@ -244,16 +245,16 @@ class Meters(models.Model):
 
 
 class Notifications(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     notification_id = models.CharField(unique=True, max_length=50)
     title = models.CharField(max_length=255)
     message = models.TextField()
     type = models.CharField(max_length=50, blank=True, null=True)
-    priority = models.CharField(max_length=50, blank=True, null=True)
+    priority = models.CharField(max_length=50, blank=True, null=True, default='medium')
     recipient_type = models.CharField(max_length=50, blank=True, null=True)
     recipient_id = models.UUIDField(blank=True, null=True)
     delivery_method = models.CharField(max_length=50, blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=50, blank=True, null=True, default='pending')
     action_url = models.CharField(max_length=500, blank=True, null=True)
     sent_at = models.DateTimeField(blank=True, null=True)
     read_at = models.DateTimeField(blank=True, null=True)
@@ -266,7 +267,7 @@ class Notifications(models.Model):
 
 
 class PaymentMethods(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer_user = models.ForeignKey(CustomerUsers, models.DO_NOTHING)
     type = models.CharField(max_length=50)
     card_number_encrypted = models.CharField(max_length=255, blank=True, null=True)
@@ -274,8 +275,8 @@ class PaymentMethods(models.Model):
     expiry_date = models.DateField(blank=True, null=True)
     holder_name = models.CharField(max_length=255)
     bank_name = models.CharField(max_length=255, blank=True, null=True)
-    is_default = models.BooleanField(blank=True, null=True)
-    is_active = models.BooleanField(blank=True, null=True)
+    is_default = models.BooleanField(blank=True, null=True, default=False)
+    is_active = models.BooleanField(blank=True, null=True, default=True)
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
 
@@ -286,7 +287,7 @@ class PaymentMethods(models.Model):
 
 
 class Payments(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     payment_id = models.CharField(unique=True, max_length=50)
     invoice = models.ForeignKey(Invoices, models.DO_NOTHING)
     customer_user = models.ForeignKey(CustomerUsers, models.DO_NOTHING, blank=True, null=True)
@@ -296,9 +297,9 @@ class Payments(models.Model):
     transaction_id = models.CharField(max_length=255, blank=True, null=True)
     reference = models.CharField(max_length=255, blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=50, blank=True, null=True, default='completed')
     processed_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='processed_by', blank=True, null=True)
-    payment_date = models.DateTimeField(blank=True, null=True)
+    payment_date = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
 
@@ -309,7 +310,7 @@ class Payments(models.Model):
 
 
 class Permissions(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     role = models.ForeignKey('Roles', models.DO_NOTHING)
     resource = models.CharField(max_length=100)
     action = models.CharField(max_length=50)
@@ -323,7 +324,7 @@ class Permissions(models.Model):
 
 
 class QualityData(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     meter = models.ForeignKey(Meters, models.DO_NOTHING)
     ph_level = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True)
     turbidity = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
@@ -331,7 +332,7 @@ class QualityData(models.Model):
     hardness = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
     temperature = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     timestamp = models.DateTimeField()
-    status = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=50, blank=True, null=True, default='good')
     created_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -341,11 +342,11 @@ class QualityData(models.Model):
 
 
 class RegionalZones(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(unique=True, max_length=100)
     description = models.TextField(blank=True, null=True)
-    total_customers = models.IntegerField(blank=True, null=True)
-    total_meters = models.IntegerField(blank=True, null=True)
+    total_customers = models.IntegerField(blank=True, null=True, default=0)
+    total_meters = models.IntegerField(blank=True, null=True, default=0)
     average_usage = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
@@ -357,7 +358,7 @@ class RegionalZones(models.Model):
 
 
 class Roles(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(unique=True, max_length=100)
     description = models.TextField(blank=True, null=True)
     permission = models.JSONField(blank=True, null=True)
@@ -372,14 +373,14 @@ class Roles(models.Model):
 
 
 class SupportTickets(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     ticket_id = models.CharField(unique=True, max_length=50)
     customer_user = models.ForeignKey(CustomerUsers, models.DO_NOTHING)
     customer = models.ForeignKey(Customers, models.DO_NOTHING)
     subject = models.CharField(max_length=255)
     description = models.TextField()
-    priority = models.CharField(max_length=50, blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
+    priority = models.CharField(max_length=50, blank=True, null=True, default='medium')
+    status = models.CharField(max_length=50, blank=True, null=True, default='open')
     category = models.CharField(max_length=100, blank=True, null=True)
     assigned_to = models.ForeignKey('Users', models.DO_NOTHING, db_column='assigned_to', blank=True, null=True)
     resolved_at = models.DateTimeField(blank=True, null=True)
@@ -393,12 +394,12 @@ class SupportTickets(models.Model):
 
 
 class UsageGoals(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     meter = models.ForeignKey(Meters, models.DO_NOTHING)
     target_usage = models.DecimalField(max_digits=12, decimal_places=3)
     month = models.IntegerField()
     year = models.IntegerField()
-    status = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=50, blank=True, null=True, default='active')
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
 
@@ -410,7 +411,7 @@ class UsageGoals(models.Model):
 
 
 class Users(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.CharField(unique=True, max_length=255)
     password = models.CharField(max_length=255)
     firstname = models.CharField(db_column='firstName', max_length=100)  # Field name made lowercase.
@@ -418,12 +419,27 @@ class Users(models.Model):
     role = models.ForeignKey(Roles, models.DO_NOTHING)
     department = models.CharField(max_length=100, blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=50, blank=True, null=True, default='active')
     avatar_url = models.TextField(blank=True, null=True)
     last_login = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
     deleted_at = models.DateTimeField(blank=True, null=True)
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    @property
+    def is_active(self):
+        return self.status == 'active'
+
+    def get_username(self):
+        return self.email
 
     class Meta:
         managed = True
@@ -432,15 +448,15 @@ class Users(models.Model):
 
 
 class WorkOrders(models.Model):
-    id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     work_order_id = models.CharField(unique=True, max_length=50)
     customer = models.ForeignKey(Customers, models.DO_NOTHING)
     meter = models.ForeignKey(Meters, models.DO_NOTHING, blank=True, null=True)
     assigned_to = models.ForeignKey(Users, models.DO_NOTHING, db_column='assigned_to', blank=True, null=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    priority = models.CharField(max_length=50, blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
+    priority = models.CharField(max_length=50, blank=True, null=True, default='medium')
+    status = models.CharField(max_length=50, blank=True, null=True, default='open')
     scheduled_date = models.DateTimeField(blank=True, null=True)
     completed_date = models.DateTimeField(blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
