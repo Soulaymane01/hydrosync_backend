@@ -137,7 +137,8 @@ os.environ['PGCLIENTENCODING'] = 'UTF8'
 
 # Add CORS settings
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Your frontend URL
+    "http://localhost:3000",
+    "http://localhost:3001",
     "http://localhost:5173",  # Vite default
 ]
 
