@@ -89,6 +89,21 @@ class CustomerUsers(models.Model):
     updated_at = models.DateTimeField(blank=True, null=True)
     deleted_at = models.DateTimeField(blank=True, null=True)
 
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+    
+    # is_active field already exists as BooleanField, but we can add property or just use the field.
+    # The models.BooleanField(db_column='is_active') is already there. 
+    # But for consistency with User model override, let's just rely on the field attribute.
+
+    def get_username(self):
+        return self.email
+
     class Meta:
         managed = True
         db_table = 'customer_users'
